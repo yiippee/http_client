@@ -324,13 +324,13 @@ void RequestDispatcher::executeQuery(RequestDispatcher *dispatcher, HttpMethod m
                                         reply, internal ? manager : NULL);
     });
 
-    QObject::connect(reply, &QNetworkReply::finished, [=] {
-        QString successMessage = RequestDispatcher::readReply(reply, encoding); // 请求结束时一次性读取所有响应数据
-        QString errorMessage   = reply->errorString();
-        RequestDispatcher::handleFinish(debug, successMessage, errorMessage, successHandler, errorHandler,
-                                        reply, internal ? manager : NULL);
+//    QObject::connect(reply, &QNetworkReply::finished, [=] {
+//        QString successMessage = RequestDispatcher::readReply(reply, encoding); // 请求结束时一次性读取所有响应数据
+//        QString errorMessage   = reply->errorString();
+//        RequestDispatcher::handleFinish(debug, successMessage, errorMessage, successHandler, errorHandler,
+//                                        reply, internal ? manager : NULL);
 
-        });
+//        });
 }
 
 QNetworkAccessManager* RequestDispatcher::getManager(RequestDispatcher *dispatcher, bool *internal) {

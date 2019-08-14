@@ -7,6 +7,9 @@
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlRecord>
+#include <QMessageBox>
+#include <QTimer>
+#include "websocketclient.h"
 
 http h;
 
@@ -83,6 +86,9 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+//    // 登录
+//    login("lzb", "123");
+
     ui->setupUi(this);
     ui->comboBox->setEditable(true);
     QAction *del_act = new QAction("删除");
@@ -113,6 +119,15 @@ MainWindow::MainWindow(QWidget *parent) :
     //connect(del_act, SIGNAL(triggered()), this, SLOT(addComboBoxItem()));
 
     QObject::connect(&h, SIGNAL(valueChanged(const QString&)),this,SLOT(requestFinished(const QString&)));
+}
+
+void MainWindow::receiveWsMsg(const QString& msg)
+{
+    qDebug() << "ws recv: " << msg;
+    disPlayTextBrowser(msg);
+    // 回复消息
+    WebsocketClient *ws = qobject_cast<WebsocketClient*>(sender());
+    ws->sentMessage("hahahah");
 }
 
 void MainWindow::delComboBoxItem()
@@ -184,8 +199,9 @@ void MainWindow::on_pushButton_clicked()
     addComboBoxItem(baseUrl);
 }
 
-void MainWindow::requestFinished(const QString& str) {
-    ui->textBrowser->insertPlainText(str+"\r\n");
+void MainWindow::requestFinished(const QString& str)
+{
+    disPlayTextBrowser(str);
 }
 
 
@@ -215,6 +231,94 @@ void MainWindow::on_postButton_clicked()
 
 void MainWindow::on_tokenButton_clicked()
 {
-    ui->textBrowser->insertPlainText("\r\nTOKEN:\r\n" + h.GetToken()+"\r\n");
+    disPlayTextBrowser("\r\nTOKEN:\r\n" + h.GetToken()+"\r\n");
 }
 
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    switch( QMessageBox::information(this,tr("提示"),tr("你确定退出该软件?"),tr("确定"), tr("取消"), 0, 1))
+    {
+    case 0:
+        SqliteDB::getInstance()->db.close();
+        event->accept();
+        break;
+    case 1:
+    default:
+        event->ignore();
+        break;
+    }
+}
+
+bool MainWindow::login(const QString &userName, const QString &passwd)
+{
+    //声明本地EventLoop
+    QEventLoop loop;
+//    QTimer timer;
+//    QObject::connect(&timer,SIGNAL(timeout()),&loop,SLOT(quit()));
+//    timer.start(3000);
+
+    bool result = false;
+    //先连接好信号
+    connect(this,  &MainWindow::logined, [&](bool r, const QString &info){
+        result = r;
+        qDebug() << info;
+        //槽中退出事件循环
+        loop.quit();
+    });
+    QObject::connect(this, SIGNAL(logined2()), &loop,SLOT(quit()));
+    //发起登录请求
+    sendLoginRequest(userName, passwd);
+    //启动事件循环。阻塞当前函数调用，但是事件循环还能运行。
+    //这里不会再往下运行，直到前面的槽中，调用loop.quit之后，才会继续往下走
+    loop.exec();
+    //返回result。loop退出之前，result中的值已经被更新了。
+
+//    if (timer.isActive()){
+//        timer.stop();
+//        return true;
+//    } else {
+//        return false;
+//    }
+    return result;
+}
+
+void MainWindow::sendLoginRequest(const QString &userName, const QString &passwd)
+{
+    if (userName == "lzb" && passwd == "123") {
+        //emit logined(true, "login ok");
+        emit logined2();
+    }
+}
+
+void MainWindow::disPlayTextBrowser(const QString& content)
+{
+    if (!ui->radioButton->isChecked() && content.length() > 1) {
+        ui->textBrowser->clear();
+    }
+
+    QJsonDocument doc = QJsonDocument::fromJson(content.toUtf8());
+    if (!doc.isNull()) {
+        QString jsonString = doc.toJson(QJsonDocument::Indented);
+        ui->textBrowser->insertPlainText(jsonString+"\r\n");
+        return;
+    }
+
+    ui->textBrowser->insertPlainText(content+"\r\n");
+}
+
+void MainWindow::on_actionabout_triggered()
+{
+    QMessageBox::about(this, tr("about"), tr("作者: 李占斌 \r\n佛山市登宇通科技"));
+}
+
+void MainWindow::on_websocketButton_clicked()
+{
+    // 连接websocket
+    QString baseUrl = ui->comboBox->currentText();
+    QString port = ui->portEdit->text();
+    QString url = "ws://" + baseUrl + ":" + port + "/wslog";
+    bool debug = true;
+    WebsocketClient* ws = new WebsocketClient(QUrl(url), debug);
+    connect(ws, SIGNAL(sendMsg(QString)), this, SLOT(receiveWsMsg(const QString&)));
+    addComboBoxItem(baseUrl);
+}

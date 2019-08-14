@@ -5,6 +5,7 @@
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
+#include <QCloseEvent>
 
 namespace Ui {
 class MainWindow;
@@ -19,6 +20,12 @@ public:
     ~MainWindow();
 
     static void handle (const QString & str);
+    bool login(const QString &userName, const QString &passwd);
+    void sendLoginRequest(const QString &userName, const QString &passwd);
+
+signals:
+    void logined(bool, const QString&);
+    void logined2();
 
 private slots:
     void addComboBoxItem(QString item);
@@ -32,8 +39,19 @@ private slots:
 
     void on_tokenButton_clicked();
 
+    void receiveWsMsg(const QString& msg);
+
+    void on_actionabout_triggered();
+
+    void on_websocketButton_clicked();
+
 private:
+    void disPlayTextBrowser(const QString& content);
     Ui::MainWindow *ui;
+
+protected:
+    //这是一个虚函数，继承自QEvent.只要重写了这个虚函数，当你按下窗口右上角的"×"时，就会调用你所重写的此函数.
+    virtual void closeEvent(QCloseEvent*event);
 };
 
 class http:public QObject {
