@@ -45,6 +45,8 @@ private slots:
 
     void on_websocketButton_clicked();
 
+    void on_postButton_json_clicked();
+
 private:
     void disPlayTextBrowser(const QString& content);
     Ui::MainWindow *ui;

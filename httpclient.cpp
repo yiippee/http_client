@@ -346,7 +346,11 @@ QNetworkRequest RequestDispatcher::createRequest(RequestDispatcher *dispatcher, 
 
     // 如果是 GET 请求，并且参数不为空，则编码请求的参数，放到 URL 后面
     if (get && !dispatcher->params.isEmpty()) {
-        dispatcher->url += "?" + dispatcher->params.toString(QUrl::FullyEncoded);
+        if (dispatcher->url.contains("?",Qt::CaseSensitive)) {
+            dispatcher->url += "&" + dispatcher->params.toString(QUrl::FullyEncoded);
+        } else {
+            dispatcher->url += "?" + dispatcher->params.toString(QUrl::FullyEncoded);
+        }
     }
 
     // 调试时输出网址和参数

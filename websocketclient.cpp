@@ -21,7 +21,7 @@ void WebsocketClient::onConnected()
 {
     if (m_debug)
         qDebug() << "WebSocket connected";
-    // 感觉这样多此一举，转了一道啊，感觉可以直接对应到gui中的槽中啊
+    // 感觉这样多此一举，转了一道啊，感觉可以直接对应到 gui中的槽中啊
     connect(&m_webSocket, &QWebSocket::textMessageReceived,
             this, &WebsocketClient::onTextMessageReceived);
     m_connected = true;

@@ -2,6 +2,7 @@
 #include <QtSql/QSqlError>
 #include <QDebug>
 
+// 单例
 SqliteDB* SqliteDB::instance = nullptr;
 
 SqliteDB::SqliteDB()

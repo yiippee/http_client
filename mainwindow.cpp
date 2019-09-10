@@ -10,6 +10,7 @@
 #include <QMessageBox>
 #include <QTimer>
 #include "websocketclient.h"
+#include "thread.h"
 
 http h;
 
@@ -97,7 +98,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     // 初始化 combobox idem
     //查询
-    QSqlQuery qry(SqliteDB::getInstance()->db);
+    QSqlQuery qry(SqliteDB::getInstance()->db); // 单例模式
     qry.prepare( "SELECT url FROM url" );
     if( !qry.exec() )
         qDebug() << qry.lastError();
@@ -119,6 +120,13 @@ MainWindow::MainWindow(QWidget *parent) :
     //connect(del_act, SIGNAL(triggered()), this, SLOT(addComboBoxItem()));
 
     QObject::connect(&h, SIGNAL(valueChanged(const QString&)),this,SLOT(requestFinished(const QString&)));
+
+    // 开线程，接受串口数据
+    MasterThread* thread = new MasterThread(); // 这是一个局部变量哦，不需要保存 thread 对象的指针，因为qt框架自动会维护对象
+    connect(thread, &MasterThread::response, this, &MainWindow::requestFinished);
+    connect(thread, &MasterThread::error, this, &MainWindow::requestFinished);
+    connect(thread, &MasterThread::timeout, this, &MainWindow::requestFinished);
+    // thread->transaction("com3", 1000, "hello.");
 }
 
 void MainWindow::receiveWsMsg(const QString& msg)
@@ -267,7 +275,7 @@ bool MainWindow::login(const QString &userName, const QString &passwd)
     });
     QObject::connect(this, SIGNAL(logined2()), &loop,SLOT(quit()));
     //发起登录请求
-    sendLoginRequest(userName, passwd);
+    sendLoginRequest(userName, passwd); // 这样发起请求，会在 exec 执行之前就已经触发了quit，所以事件循环还是不变啊
     //启动事件循环。阻塞当前函数调用，但是事件循环还能运行。
     //这里不会再往下运行，直到前面的槽中，调用loop.quit之后，才会继续往下走
     loop.exec();
@@ -292,7 +300,7 @@ void MainWindow::sendLoginRequest(const QString &userName, const QString &passwd
 
 void MainWindow::disPlayTextBrowser(const QString& content)
 {
-    if (!ui->radioButton->isChecked() && content.length() > 1) {
+    if (!ui->radioButton->isChecked() && content.length() > 0) {
         ui->textBrowser->clear();
     }
 
@@ -320,5 +328,26 @@ void MainWindow::on_websocketButton_clicked()
     bool debug = true;
     WebsocketClient* ws = new WebsocketClient(QUrl(url), debug);
     connect(ws, SIGNAL(sendMsg(QString)), this, SLOT(receiveWsMsg(const QString&)));
+    addComboBoxItem(baseUrl);
+}
+
+void MainWindow::on_postButton_json_clicked()
+{
+    // QString baseUrl = ui->urlEdit->text();
+    QString baseUrl = ui->comboBox->currentText();
+    int port = ui->portEdit->text().toInt();
+    QString usernameKey = ui->Editparam_k1->text();
+    QString usernameVal = ui->Editparam_v1->text();
+    QString passwordKey = ui->Editparam_k2->text();
+    QString passwordVal = ui->Editparam_v2->text();
+
+    HttpClient client(baseUrl, port);
+//    client.param(usernameKey, usernameVal);
+//    client.param(passwordKey, passwordVal);
+    QString str ="{\"approver\":\"lizhanbin\",\"distributorID\":777,\"productSpuID\":888}";
+    client.json(str);
+
+    client.post(h.handleToken, errorHandler);
+
     addComboBoxItem(baseUrl);
 }
